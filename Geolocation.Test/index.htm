@@ -1,0 +1,135 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Geolocation is super easy!</title>
+</head>
+<body>
+    Latitude: <span id='latitude'></span>, Longitude: <span id='longitude'></span>, Accuracy: <span id='accuracy'></span> meters<br />
+
+    Error Message: <span id='error'></span><br />
+
+    Latest Tweet: <span id='from_user'></span> tweeted <span id='text'></span><br />
+
+    Street Address: <span id='address'></span><br />
+
+    <div id='map' style='width: 400px; height: 400px;'></div>
+
+    Where can you go in Regina to have your career really take off?<br />
+    Hint: <span id='distance'></span>
+
+    <script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js'></script>
+    <script type='text/javascript' src='http://maps.google.com/maps/api/js?sensor=true'></script>
+    <script type='text/javascript' src='http://modernizr.com/downloads/modernizr-2.5.3.js'></script>
+
+    <script type='text/javascript'>
+        $().ready(function () {
+            //init google map api controls
+            initMap();
+
+            //settings for "geolocation game" :)
+            window.goal = new google.maps.LatLng(50.433, -104.656);
+            window.lastDistance = 0;
+
+            //check if device / browser supports geolocation using Modernizr library
+            if (Modernizr.geolocation) {
+            //if (navigator.geolocation != undefined) {
+
+                //navigator.geolocation.getCurrentPosition(getPositionSuccess, getPositionError);
+
+                //save watchPosition ID to window variable so we can cancel it later
+                window.watchID = navigator.geolocation.watchPosition(getPositionSuccess, getPositionError, { maximumAge: 1000 * 60 * 10 });
+
+                window.setTimeout(function () {
+                    //stop watching position
+                    navigator.geolocation.clearWatch(window.watchID);
+                    alert("stopped watching");
+                }, 1000 * 60); //after 60 seconds
+            }
+            else {
+                alert("Geolocation is not accessable in this browser");
+            }
+        });
+
+        function initMap() {
+            window.geocoder = new google.maps.Geocoder();
+            //create a map pointing to iQmetrix Software
+            window.map = new google.maps.Map(document.getElementById('map'),
+                { center: new google.maps.LatLng(50.444, -104.612), zoom: 14, mapTypeId: google.maps.MapTypeId.ROADMAP });
+            window.marker = new google.maps.Marker({ map: window.map });
+            window.polyline = new google.maps.Polyline({ map: window.map });
+        }
+
+        function getPositionSuccess(position) {
+
+            updateLocation(position);
+
+            geocode(position);
+
+            updateMap(position);
+
+            checkDistanceToGoal(position);
+        }
+
+        function getPositionError(error) {
+            //ideally you'd check error.code against constants like error.TIMEOUT and act accordingly
+            $('#error').text(error.code + ": " + error.message);
+        }
+
+        function updateLocation(position) {
+            //the three attributes you can guarantee will be in coords
+            $('#latitude').text(position.coords.latitude);
+            $('#longitude').text(position.coords.longitude);
+            $('#accuracy').text(position.coords.accuracy);
+        }
+
+        function geocode(position) {
+            var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude)
+            //ask google maps api for a street address at the specific position
+            window.geocoder.geocode({
+                latLng: latlng
+            }, onGeocodingSuccess);
+        }
+
+        function onGeocodingSuccess(results, status) {
+            $('#address').text(results[0].formatted_address);
+        }
+
+        function updateMap(position) {
+            var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude)
+
+            //move map and pointer to current position, also draw a line from the last position to the current one
+            window.map.panTo(latlng);
+            window.marker.setPosition(latlng);
+            var points = window.polyline.getPath();
+            points.push(latlng);
+            window.polyline.setPath(points);
+        }
+
+        function checkDistanceToGoal(position) {
+            var distance = getDistance(latlng, window.goal);
+            //if we're less than 50 meters away from the goal, display win condition
+            if (distance < 50) {
+                navigator.geolocation.clearWatch(window.watchID);
+                $('#distance').text("You found it!");
+            } else {
+                //if we're further away from the goal, say "colder", else say "hotter"
+                var difference = distance - window.lastDistance;
+                if (difference < 0) $('#distance').text("Getting hotter!");
+                else $('#distance').text("Getting colder :(");
+                window.lastDistance = distance;
+            }
+        }
+
+        //function for calculating distance between two coordinates
+        //borrowed from http://www.movable-type.co.uk/scripts/latlong.html
+        function getDistance(current, target) {
+            var R = 6371;
+            var x = (target.lng() - current.lng()) * Math.cos((current.lat() + target.lat()) / 2);
+            var y = (target.lat() - current.lat());
+            var d = Math.sqrt(x * x + y * y) * R;
+
+            return d;
+        }
+    </script>
+</body>
+</html>
