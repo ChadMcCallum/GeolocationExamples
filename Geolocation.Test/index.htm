@@ -63,11 +63,23 @@
 
             updateLocation(position);
 
+            getLatestTweet(position);
+
             geocode(position);
 
             updateMap(position);
 
             checkDistanceToGoal(position);
+        }
+
+        function getLatestTweet(position) {
+            //ask the twitter API for tweets near us (that contain the letter 'e')
+            $.getJSON('http://search.twitter.com/search.json?callback=?&q=e&geocode=' +
+                    position.coords.latitude + ',' + position.coords.longitude + ',10km', function (data) {
+                        $('#from_user').text(data.results[0].from_user);
+                        $('#text').text(data.results[0].text);
+                    });
+
         }
 
         function getPositionError(error) {
